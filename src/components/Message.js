@@ -49,7 +49,7 @@ function isReadAndSelected(read, selected){
   } else if (read){
     return "row message read"
   } else if (selected){
-    return "row message selected"
+    return "row message unread selected"
   } else {
     return "row message unread"
     }

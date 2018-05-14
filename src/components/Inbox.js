@@ -1,6 +1,8 @@
 import React, { Component } from 'react'
 import Messages from './Messages'
 import Toolbar from './Toolbar'
+import Compose from './Compose'
+import axios from 'axios'
 
 import messageData from '../data'
 
@@ -8,10 +10,35 @@ class Inbox extends Component{
   constructor(props){
     super(props)
     this.state = {
-      messages: messageData
+      compose: false,
+      messages: []
     }
   }
+  componentDidMount = () => {
+    this.getAllMessages()
+  }
 
+getAllMessages = () => {
+  axios.get('http://localhost:8082/api/messages')
+  .then(allMess => {
+    console.log(allMess);
+    this.setState({messages: allMess.data})
+  })
+
+}
+  showCompose = () => {
+    this.setState({compose: !this.state.compose})
+  }
+  handleCompose = (event) => {
+    event.preventDefault()
+    const subject = event.target.subject.value
+    const body = event.target.body.value
+    axios.post('http://localhost:8082/api/messages', {subject, body})
+    .then(response => {
+      this.getAllMessages()
+      this.showCompose()
+    })
+  }
   unselectAll = () => {
     const allFalse = this.state.messages.map(message => ({...message, selected: false}))
     this.setState({messages: allFalse})
@@ -26,51 +53,79 @@ class Inbox extends Component{
     this.setState( { messages: checked })
   }
   handleStar = (id) => {
-    const star = this.state.messages.map(message => message.id === id ? {...message, starred:!message.starred} : {...message})
-    this.setState({messages: star})
+    axios.patch('http://localhost:8082/api/messages', {messageIds: [id], command: 'star'})
+    .then(response => {
+      this.getAllMessages()
+    })
+    // const star = this.state.messages.map(message => message.id === id ? {...message, starred:!message.starred} : {...message})
+    // this.setState({messages: star})
   }
 
   handleMarkRead = () => {
-    const allRead = this.state.messages.map(message => message.selected === true ? ({...message, read: true, selected: false}) : ({...message}))
-    this.setState({messages: allRead})
-    // this.unselectAll()
+    const filteredForRead = this.state.messages.filter(message => {
+      if(message.selected === true){
+        return message.id
+      }
+    })
+    const selectedForRead = filteredForRead.map(message => message.id)
+    console.log(filteredForRead, selectedForRead);
+    axios.patch('http://localhost:8082/api/messages', {messageIds: selectedForRead, read: true, command: 'read'})
+
+    .then(response => {
+      this.getAllMessages()
+    })
   }
   handleMarkUnread = () => {
-    const noneRead = this.state.messages.map(message => message.selected === true ? ({...message, read: false, selected: false}) : ({...message}))
-    this.setState({messages: noneRead})
+    const filteredForUnread = this.state.messages.filter(message => {
+      if(message.selected === true){
+        return message.id
+      }
+    })
+    const selectedForUnread = filteredForUnread.map(message => message.id)
+    console.log(filteredForUnread, selectedForUnread);
+    axios.patch('http://localhost:8082/api/messages', {messageIds: selectedForUnread, read: false, command: 'read'})
+    .then(response => {
+      this.getAllMessages()
+    })
   }
 
   addLabel = (label) => {
-    const selectedForLabel = this.state.messages.map(message => {
-      if(message.selected === true && message.labels.indexOf(label) === -1){
-        return ({...message, labels:[...message.labels, label]})
-      } else {
-        return ({...message})
+    const filteredForAddLabel = this.state.messages.filter(message => {
+      if(message.selected === true){
+        return message.id
       }
     })
-    this.setState({messages: selectedForLabel})
+    const selectedForAddLabel = filteredForAddLabel.map(message => message.id)
+      axios.patch('http://localhost:8082/api/messages', {messageIds:selectedForAddLabel, label, command: 'addLabel'})
+      .then(response => {
+        this.getAllMessages()
+      })
   }
   removeLabel = (label) => {
-    const selectedForRemoveLabel = this.state.messages.map(message => {
-      if(message.selected === true && message.labels.indexOf(label) !== -1){
-        return ({...message, labels:[...message.labels.filter(l => l !== label)]})
-      } else {
-        return ({...message})
+    const filteredForUnreadLabel = this.state.messages.filter(message => {
+      if(message.selected === true){
+        return message.id
       }
     })
-    this.setState({messages: selectedForRemoveLabel})
+    const selectedForUnreadLabel = filteredForUnreadLabel.map(message => message.id)
+      axios.patch('http://localhost:8082/api/messages', {messageIds:selectedForUnreadLabel, label, command: 'removeLabel'})
+      .then(response => {
+        this.getAllMessages()
+      })
   }
 
   trashCan = () => {
-    const selectedForTrash = this.state.messages.filter(message => {
+    const filteredForTrash = this.state.messages.filter(message => {
       if(message.selected === true){
-        return false
-      } else {
-        return true
+        return message.id
       }
-  })
+    })
+    const selectedForTrash = filteredForTrash.map(message => message.id)
   console.log(selectedForTrash);
-  this.setState({messages: selectedForTrash})
+  axios.patch('http://localhost:8082/api/messages', {messageIds:selectedForTrash, command:'delete'})
+  .then(response => {
+    this.getAllMessages()
+  })
 }
 
 
@@ -86,8 +141,11 @@ class Inbox extends Component{
        addLabel = {this.addLabel}
        removeLabel = {this.removeLabel}
        trashCan = {this.trashCan}
+       showCompose = {this.showCompose}
       />
-
+      {
+        this.state.compose ? <Compose handleCompose={this.handleCompose}/> : null
+      }
       <Messages
        messages = { this.state.messages }
        handleCheckBox = {this.handleCheckBox}

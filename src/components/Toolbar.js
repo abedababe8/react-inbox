@@ -1,12 +1,17 @@
 import React from 'react'
 
-const Toolbar = ({messages, handleMarkRead, handleMarkUnread, unselectAll, selectAll, addLabel, removeLabel, trashCan}) => (
+const Toolbar = ({messages, handleMarkRead, handleMarkUnread, unselectAll, selectAll, addLabel, removeLabel, trashCan, showCompose}) => (
   <div className="row toolbar">
   <div className="col-md-12">
     <p className="pull-right">
       <span className="badge badge">{findAllUnread(messages)}</span>
       unread messages
     </p>
+
+    <a className="btn btn-danger"
+    onClick={(event) => showCompose()}>
+      <i className="fa fa-plus"></i>
+    </a>
 
     <button className="btn btn-default"
     onClick={(event) => checkSelected(messages, unselectAll, selectAll)}>
